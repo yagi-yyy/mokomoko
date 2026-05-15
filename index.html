@@ -3,132 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>キラキラ・マウスストーカー（くま）</title>
+    <title>冒険者ギルドの性格診断</title>
     <style>
+        /* 全体のスタイル設定 */
         body {
             margin: 0;
-            overflow: hidden;
-            background-color: #0a0514; /* 紫が最も美しく映える深みのある背景 */
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            padding: 0;
+            background-color: #0b071e; /* 幻想的な夜空のようなディープパープル */
+            color: #e0d7ff;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
 
-        .instruction {
-            color: rgba(210, 180, 255, 0.4); /* 文字も淡い紫に */
-            font-size: 1.5rem;
-            letter-spacing: 2px;
-            pointer-events: none;
-            user-select: none;
-            z-index: 10;
+        /* 診断アプリのカードコンテナ */
+        .quiz-container {
+            width: 90%;
+            max-width: 500px;
+            background: rgba(25, 15, 50, 0.8);
+            border: 2px solid #8a5cf5;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(138, 92, 245, 0.4);
+            text-align: center;
+            box-sizing: border-box;
+            backdrop-filter: blur(8px);
         }
 
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+        h1 {
+            font-size: 1.8rem;
+            color: #c3a6ff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(195, 166, 255, 0.5);
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        /* 画面切り替え用のクラス */
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ボタンの共通スタイル */
+        .btn {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+            font-weight: bold;
             width: 100%;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.6);
+            background: linear-gradient(135deg, #4f46e5, #9333ea);
+        }
+
+        /* 選択肢ボタン専用のスタイル */
+        .answer-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #5b3fa1;
+            color: #e0d7ff;
+            text-align: left;
+            padding: 15px 20px;
+            font-size: 1rem;
+            border-radius: 10px;
+            box-shadow: none;
+        }
+
+        .answer-btn:hover {
+            background: rgba(138, 92, 245, 0.2);
+            border-color: #c3a6ff;
+            color: white;
+            transform: translateX(5px);
+        }
+
+        /* 結果画面のテキスト装飾 */
+        .result-title {
+            font-size: 2rem;
+            color: #ffd700; /* ゴールド */
+            margin: 20px 0;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            font-weight: bold;
+        }
+
+        .result-desc {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.95rem;
+            border-left: 4px solid #a855f7;
+        }
+
+        /* 進行度ゲージ */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
             height: 100%;
-            pointer-events: none;
+            width: 0%;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            transition: width 0.3s ease;
         }
     </style>
 </head>
 <body>
 
-    <div class="instruction">マウスを動かしてみてね (🐻)</div>
-    <canvas id="particleCanvas"></canvas>
+    <div class="quiz-container">
+        <div id="start-screen" class="screen active">
+            <h1>⚔️ 冒険者性格診断 🔮</h1>
+            <p>見知らぬ世界への旅立ちが近づいています。<br>あなたの選択から、内に秘めた「冒険者の素質」を導き出します。</p>
+            <button class="btn" onclick="startQuiz()">旅に出る</button>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+            <p id="question-text">ここに質問が表示されます。</p>
+            <div id="answer-buttons">
+                </div>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <h1>✨ 診断結果 ✨</h1>
+            <p>あなたに宿る冒険者の魂は……</p>
+            <div id="result-type" class="result-title">勇者</div>
+            <p id="result-description" class="result-desc">ここに解説が表示されます。</p>
+            <button class="btn" onclick="restartQuiz()" style="margin-top: 20px;">もう一度診断する</button>
+        </div>
+    </div>
 
     <script>
-        const canvas = document.getElementById('particleCanvas');
-        const ctx = canvas.getContext('2d');
+        // 質問データ（各選択肢に対応する性格タイプを設定）
+        const questions = [
+            {
+                text: "Q1. 旅立ちの朝、王様から「1つだけ武器を授けよう」と言われました。あなたが選ぶのは？",
+                answers: [
+                    { text: "王道を行く「鋼の長剣」", type: "hero" },
+                    { text: "怪しく光る「古代の魔導書」", type: "wizard" },
+                    { text: "扱いやすそうな「万能の短剣」", type: "thief" },
+                    { text: "誰の傷でも癒やす「奇跡の杖」", type: "cleric" }
+                ]
+            },
+            {
+                text: "Q2. 道を進むと、分かれ道が現れました。どのルートを選びますか？",
+                answers: [
+                    { text: "険しいが近道になりそうな「崖の道」", type: "hero" },
+                    { text: "何が潜んでいるかわからない「薄暗い洞窟」", type: "thief" },
+                    { text: "安全そうだが遠回りな「美しい森の道」", type: "cleric" },
+                    { text: "古い石碑が建っている「未知の魔力漂う道」", type: "wizard" }
+                ]
+            },
+            {
+                text: "Q3. 森の奥で、傷ついた小さな魔獣が倒れています。どうする？",
+                answers: [
+                    { text: "手持ちの回復薬を分けてあげる", type: "cleric" },
+                    { text: "危険がないかじっくり観察して分析する", type: "wizard" },
+                    { text: "罠かもしれないので、そっと通り過ぎる", type: "thief" },
+                    { text: "放っておけない！すぐに抱き上げて助ける", type: "hero" }
+                ]
+            },
+            {
+                text: "Q4. ついにダンジョンの最奥で宝箱を発見！しかし、罠の気配がします。",
+                answers: [
+                    { text: "迷わずその場で開ける！", type: "hero" },
+                    { text: "道具を使って慎重に罠を解除する", type: "thief" },
+                    { text: "魔法を使って安全な距離から調べる", type: "wizard" },
+                    { text: "仲間と相談して、みんなの意見に合わせる", type: "cleric" }
+                ]
+            }
+        ];
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        // 診断結果データ
+        const results = {
+            hero: {
+                title: "伝説の勇者タイプ ⚔️",
+                desc: "あなたは正義感が強く、困難に真っ向から立ち向かう勇気を持ったリーダーです。考えるよりも先に身体が動く直感派。あなたの前向きな姿勢は、自然と周囲の人々を惹きつけ、チームを勝利へ導く強力な光となります。"
+            },
+            wizard: {
+                title: "大賢者・魔術師タイプ 🔮",
+                desc: "あなたは冷静沈着で、高い知性と鋭い分析力を持った戦略家です。トラブルが起きても感情に流されず、最も効率的で確実な解決策を見つけ出すことができます。知識欲が旺盛で、誰も気づかない本質を見抜く天才肌です。"
+            },
+            thief: {
+                title: "変幻自在のシーフタイプ 💎",
+                desc: "あなたは柔軟な思考を持ち、どんな状況にも素早く適応できる自由人です。要領がよく、リスクを回避する勘が非常に優れています。ユーモアを忘れず、独自のルートを切り開いていく、世渡り上手で頼もしい存在です。"
+            },
+            cleric: {
+                title: "心優しき聖職者タイプ 🕊️",
+                desc: "あなたは共感能力が極めて高く、誰にでも優しく手を差し伸べられる温かい心の持ち主です。自分のことよりも他人の幸せやチームの調和を重んじる気質。あなたの存在自体が、傷ついた仲間を癒やす究極のオアシスです。"
+            }
+        };
+
+        let currentQuestionIndex = 0;
+        // 各タイプの得点を記録するオブジェクト
+        let scores = { hero: 0, wizard: 0, thief: 0, cleric: 0 };
+
+        // 画面を切り替える関数
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
-        const particles = [];
+        // クイズ開始
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            scores = { hero: 0, wizard: 0, thief: 0, cleric: 0 };
+            showScreen('quiz-screen');
+            showQuestion();
+        }
 
-        class Particle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                // 初期サイズ（絵文字なので少し大きめに調整）
-                this.size = Math.random() * 15 + 10;
-                // 飛び散る方向と速度
-                this.speedX = (Math.random() - 0.5) * 5;
-                this.speedY = (Math.random() - 0.5) * 5;
-                
-                // 光彩（グロー効果）の色（青紫〜赤紫）
-                const hue = Math.random() * 60 + 260;
-                this.color = `hsl(${hue}, 100%, 70%)`;
-                
-                this.alpha = 1;
-                this.decay = Math.random() * 0.01 + 0.005; // 少しゆっくり消えるように
-            }
+        // 質問の表示
+        function showQuestion() {
+            const currentQuestion = questions[currentQuestionIndex];
+            
+            // 進行度ゲージの更新
+            const progressPercent = (currentQuestionIndex / questions.length) * 100;
+            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
 
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                this.alpha -= this.decay;
-                if (this.size > 1) this.size -= 0.1; // 徐々に小さく
-            }
+            // 質問文のセット
+            document.getElementById('question-text').textContent = currentQuestion.text;
+            
+            // 選択肢ボタンの生成
+            const buttonContainer = document.getElementById('answer-buttons');
+            buttonContainer.innerHTML = ''; // 一旦クリア
+            
+            currentQuestion.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer.text;
+                button.classList.add('btn', 'answer-btn');
+                button.addEventListener('click', () => selectAnswer(answer.type));
+                buttonContainer.appendChild(button);
+            });
+        }
 
-            draw() {
-                ctx.save();
-                ctx.globalAlpha = this.alpha;
-                
-                // 円の代わりにくまの絵文字を描画
-                ctx.font = `${this.size}px serif`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                
-                // 後ろにほんのり紫の光をまとう
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = this.color;
+        // 回答が選択されたとき
+        function selectAnswer(type) {
+            scores[type]++; // 選択されたタイプのスコアを加算
+            currentQuestionIndex++;
 
-                ctx.fillText("🐻", this.x, this.y);
-
-                ctx.restore();
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResult();
             }
         }
 
-        window.addEventListener('mousemove', (e) => {
-            // 1回の移動で3個のくまを生成
-            for (let i = 0; i < 3; i++) {
-                particles.push(new Particle(e.clientX, e.clientY));
-            }
-        });
+        // 結果の計算と表示
+        function showResult() {
+            // 最も高いスコアのタイプを見つける
+            let highestType = 'hero';
+            let maxScore = -1;
 
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0) {
-                for (let i = 0; i < 2; i++) {
-                    particles.push(new Particle(e.touches[0].clientX, e.touches[0].clientY));
+            for (const type in scores) {
+                if (scores[type] > maxScore) {
+                    maxScore = scores[type];
+                    highestType = type;
                 }
             }
-        });
 
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 結果画面にデータをセット
+            const resultData = results[highestType];
+            document.getElementById('result-type').textContent = resultData.title;
+            document.getElementById('result-description').innerHTML = resultData.desc;
 
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update();
-                particles[i].draw();
-
-                if (particles[i].alpha <= 0) {
-                    particles.splice(i, 1);
-                }
-            }
-
-            requestAnimationFrame(animate);
+            showScreen('result-screen');
         }
 
-        animate();
+        // もう一度遊ぶ
+        function restartQuiz() {
+            showScreen('start-screen');
+        }
     </script>
-
 </body>
 </html>
